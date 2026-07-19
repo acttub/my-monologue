@@ -180,12 +180,15 @@ function fallbackFor(sel) {
 // 베스트에포트 IP 제한 (warm 인스턴스 한정) + 일일 전역 상한.
 // 전역 상한이 비용을 보장하는 유일한 장치다 — IP 제한은 우회되지만 이건 안 된다.
 const hits = new Map();
+// RATE_PER_MIN은 배포 전 감사 때만 올린다(프리뷰 한정). 프로덕션은 기본값을 유지한다 —
+// 감사가 자기 방어를 우회하려고 프로덕션 설정을 바꾸면 감사의 의미가 없다.
+const RATE_PER_MIN = Number(process.env.RATE_PER_MIN || 8);
 function ipLimited(ip) {
-  const now = Date.now(), win = 60000, max = 8;
+  const now = Date.now(), win = 60000;
   const arr = (hits.get(ip) || []).filter((t) => now - t < win);
   arr.push(now);
   hits.set(ip, arr);
-  return arr.length > max;
+  return arr.length > RATE_PER_MIN;
 }
 
 const DAILY_MAX = Number(process.env.DAILY_MAX || 800);
