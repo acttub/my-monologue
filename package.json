@@ -6,6 +6,7 @@
   "scripts": {
     "audit:risk": "node audit/run-audit.mjs --mode risk --n 100",
     "audit:random": "node audit/run-audit.mjs --mode random --n 200",
-    "audit:injection": "node audit/run-audit.mjs --mode injection"
+    "audit:injection": "node audit/run-audit.mjs --mode injection",
+    "check": "node audit/structural-check.mjs"
   }
 }
