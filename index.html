@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>나만의 독백 — 연습할 대본이 없을 때</title>
+<meta name="description" content="네 가지만 고르면 너만 가진 독백 한 편. 판정도 점수도 없이, 대본만.">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="나만의 독백">
+<meta property="og:description" content="네 가지만 고르면, 너만 가진 독백 한 편">
+<meta property="og:image" content="/og.jpg">
+<meta property="og:url" content="https://mono.acttub.com/">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<main id="app">
+
+  <!-- 랜딩 -->
+  <section class="screen" id="s-landing">
+    <div class="wrap">
+      <p class="brand" id="c-brand"></p>
+      <h1 class="tagline" id="c-tagline"></h1>
+      <p class="sub" id="c-sub"></p>
+      <button class="btn btn-primary" id="btn-start"></button>
+      <p class="fine" id="c-privacy"></p>
+    </div>
+  </section>
+
+  <!-- 선택 -->
+  <section class="screen" id="s-select" hidden>
+    <div class="wrap">
+      <div class="progress"><span id="prog-fill"></span></div>
+      <h2 class="question" id="q-text"></h2>
+      <div class="options" id="q-options"></div>
+      <button class="btn-back" id="btn-back" hidden>뒤로</button>
+    </div>
+  </section>
+
+  <!-- 생성 중 -->
+  <section class="screen" id="s-loading" hidden>
+    <div class="wrap center">
+      <div class="pulse"></div>
+      <p class="loading-title" id="c-generating"></p>
+      <p class="fine" id="c-generating-sub"></p>
+    </div>
+  </section>
+
+  <!-- 결과 -->
+  <section class="screen" id="s-result" hidden>
+    <div class="wrap">
+      <p class="coord" id="r-coord"></p>
+      <h2 class="r-title" id="r-title"></h2>
+      <p class="r-stage" id="r-stage"></p>
+      <div class="r-body" id="r-body"></div>
+
+      <p class="fine notice" id="c-ai-notice"></p>
+
+      <div class="actions">
+        <button class="btn btn-ghost" id="btn-again"></button>
+        <button class="btn btn-ghost" id="btn-card"></button>
+      </div>
+
+      <div class="bridge">
+        <p class="bridge-lead" id="c-bridge-lead"></p>
+        <p class="bridge-ask" id="c-bridge-ask"></p>
+        <a class="btn btn-primary" id="btn-bridge" href="#" rel="noopener"></a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<canvas id="card-canvas" width="1080" height="1440" hidden></canvas>
+
+<script src="/copy.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

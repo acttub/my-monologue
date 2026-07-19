@@ -1,0 +1,11 @@
+{
+  "name": "my-monologue",
+  "version": "0.1.0",
+  "private": true,
+  "description": "네 가지 선택으로 오리지널 독백 대본 한 편을 생성하는 미니 서비스",
+  "scripts": {
+    "audit:risk": "node audit/run-audit.mjs --mode risk --n 100",
+    "audit:random": "node audit/run-audit.mjs --mode random --n 200",
+    "audit:injection": "node audit/run-audit.mjs --mode injection"
+  }
+}
