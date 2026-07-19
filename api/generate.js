@@ -422,7 +422,17 @@ module.exports = async (req, res) => {
   }
 
   const genModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-  const reviewModel = process.env.GEMINI_REVIEW_MODEL || "gemini-flash-lite-latest";
+  // 검사 모델 2단. 감사 6회에서 안전 위반이 **전부 gone 또는 collapse**에서 나왔다.
+  // 거기만 상위 모델을 쓴다 — 전면 적용하면 지연이 약 1.8초 늘어 SC-006을 넘긴다.
+  //
+  // 실측 근거(뚫렸던 문장 5건 재현):
+  //   flash-lite  차단 4/5 — '당신과 함께 쉬고 싶습니다'(합류형)를 놓친다
+  //   3.5-flash   차단 5/5 — 합류형을 잡는다. 경계선 1건을 과잉 차단하지만
+  //                          그건 폴백으로 떨어질 뿐 안전 실패가 아니다
+  const risky = sel.target === "gone" || sel.heat === "collapse";
+  const reviewModel = risky
+    ? (process.env.GEMINI_REVIEW_MODEL_STRICT || "gemini-3.5-flash")
+    : (process.env.GEMINI_REVIEW_MODEL || "gemini-flash-lite-latest");
 
   try {
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
