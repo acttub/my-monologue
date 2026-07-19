@@ -43,6 +43,10 @@ const pick = (a, i) => a[i % a.length];
 const rnd  = (a) => a[Math.floor(Math.random() * a.length)];
 
 function selectionFor(i) {
+  // classic 전용 표본 — 2026-07-19 감사에서 문어체 성립률이 29%로 무너져 따로 잰다
+  if (MODE === "classic") {
+    return { length: pick(LENGTH, i), target: pick(TARGET, i), heat: pick(HEAT, i), tone: "classic" };
+  }
   if (MODE === "risk") {
     return {
       length: pick(LENGTH, i),
