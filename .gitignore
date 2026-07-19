@@ -6,3 +6,4 @@ node_modules/
 audit/out/
 .DS_Store
 .omc/
+.env*
