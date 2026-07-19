@@ -231,9 +231,8 @@ module.exports = async (req, res) => {
   const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "x";
   if (ipLimited(ip)) return res.status(429).json({ error: "rate" });
 
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return res.status(500).json({ error: "no_key" });
-
+  // 입력 검증이 설정 검사보다 먼저다. 잘못된 입력은 서버 상태와 무관하게 거절돼야
+  // 인젝션 방어(FR-018)를 키 없이도 감사할 수 있다.
   const body = req.body || {};
   const sel = {
     length: LENGTH.includes(body.length) ? body.length : null,
@@ -241,10 +240,14 @@ module.exports = async (req, res) => {
     heat:   HEAT.includes(body.heat)     ? body.heat   : null,
     tone:   TONE.includes(body.tone)     ? body.tone   : null
   };
-  // 구조적 입력 검증: 열거형 밖의 값은 프롬프트에 닿지 않는다 (FR-018 인젝션 방어의 1차선).
+  // 구조적 입력 검증: 열거형 밖의 값은 프롬프트에 닿지 않는다.
+  // 본문에 어떤 지시문이 실려 있든 여기서 버려지므로 프롬프트에 합류할 경로가 없다.
   if (!sel.length || !sel.target || !sel.heat || !sel.tone) {
     return res.status(400).json({ error: "bad_selection" });
   }
+
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return res.status(500).json({ error: "no_key" });
 
   // 일일 전역 상한 도달 — 폴백으로 응답한다. 사용자에게 빈손을 남기지 않는다 (FR-009·FR-024).
   if (globalLimited()) {
