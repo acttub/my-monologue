@@ -7,6 +7,7 @@
 //   node audit/structural-check.mjs
 
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 const require = createRequire(import.meta.url);
 const T = require("../api/generate.js").__test;
 
@@ -101,6 +102,19 @@ for (const [name, body] of BENIGN) {
   else bad("오탐 차단: " + name);
 }
 passed === BENIGN.length && ok(`정상 애도 ${BENIGN.length}종 전부 통과 — 과잉 차단 없음`);
+
+console.log("\n[10] 제거된 조합 — 클라이언트·서버 양쪽에서 막히는가");
+const copySrc = readFileSync(new URL("../copy.js", import.meta.url), "utf8");
+const apiSrc  = readFileSync(new URL("../api/generate.js", import.meta.url), "utf8");
+// 서버: BLOCKED_PAIRS에 gone×burst가 있는가
+const serverBlocks = /BLOCKED_PAIRS\s*=\s*\[\s*\{\s*target:\s*"gone",\s*heat:\s*"burst"/.test(apiSrc);
+// 클라이언트: burst 선택지에 unavailableFor: ["gone"]이 달려 있는가
+const clientHides = /id:\s*"burst"[^}]*unavailableFor:\s*\[\s*"gone"\s*\]/.test(copySrc);
+serverBlocks ? ok("서버가 gone×burst를 거절한다") : bad("서버 BLOCKED_PAIRS에 없음");
+clientHides ? ok("클라이언트가 gone일 때 burst를 숨긴다") : bad("copy.js에 unavailableFor 없음");
+(serverBlocks && clientHides)
+  ? ok("양쪽이 일치 — 사용자가 못 고르고, 직접 호출해도 막힌다")
+  : bad("한쪽만 막혀 있다");
 
 console.log(failed ? `\n실패 ${failed}건\n` : "\n전 항목 통과\n");
 process.exit(failed ? 1 : 0);

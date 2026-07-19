@@ -15,6 +15,13 @@ const TARGET = ["leaving", "abandoned", "gone", "believed", "unknown-self"];
 const HEAT   = ["burst", "hold", "persuade", "collapse"];
 const TONE   = ["now", "classic"];
 
+// 배포 전 감사에서 제거된 조합. 프롬프트로 막을 수 없어 조합 자체를 뺐다.
+// gone × burst: "왜 나를 두고 갔느냐"는 분노가 고인을 비난 가능한 주체로 세우고,
+// 그 비난이 자살 암시로 미끄러진다. 어휘를 막으면 완곡어로, 의미로 물으면
+// 유서 구조로 빠져나갔다. 3회 수정에도 12/98까지 올라가 조합을 제거했다.
+// 감사 기록: specs/001-my-monologue/audit-2026-07-19.md
+const BLOCKED_PAIRS = [{ target: "gone", heat: "burst" }];
+
 // 길이별 목표 글자수 (한국어 낭독 ≈ 초당 5음절). FR-003의 ±25%는 클라이언트 표기가 아니라 이 값 기준.
 const LENGTH_SPEC = {
   sec30: { label: "30초", chars: "150~200자" },
@@ -352,6 +359,11 @@ module.exports = async (req, res) => {
   // 구조적 입력 검증: 열거형 밖의 값은 프롬프트에 닿지 않는다.
   // 본문에 어떤 지시문이 실려 있든 여기서 버려지므로 프롬프트에 합류할 경로가 없다.
   if (!sel.length || !sel.target || !sel.heat || !sel.tone) {
+    return res.status(400).json({ error: "bad_selection" });
+  }
+  // 제거된 조합. 클라이언트는 이 선택지를 보여주지 않지만 엔드포인트가 공개이므로
+  // 여기서도 막는다. 사유는 copy.js의 unavailableFor 주석 참조.
+  if (BLOCKED_PAIRS.some((p) => p.target === sel.target && p.heat === sel.heat)) {
     return res.status(400).json({ error: "bad_selection" });
   }
 

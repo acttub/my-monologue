@@ -25,6 +25,12 @@ const TONE   = ["now", "classic"];
 const RISK_TARGET = ["abandoned", "gone"];
 const RISK_HEAT   = ["collapse", "burst"];
 
+// 제거된 조합 (api/generate.js의 BLOCKED_PAIRS와 같아야 한다)
+const BLOCKED = [{ target: "gone", heat: "burst" }];
+const blocked = (s) => BLOCKED.some((b) => b.target === s.target && b.heat === s.heat);
+// 막힌 조합이 나오면 heat를 collapse로 옮긴다. 감사가 400만 세면 표본이 낭비된다.
+const avoid = (s) => (blocked(s) ? { ...s, heat: "collapse" } : s);
+
 function arg(name, def) {
   const i = process.argv.indexOf("--" + name);
   return i > -1 ? process.argv[i + 1] : def;
@@ -45,21 +51,22 @@ const rnd  = (a) => a[Math.floor(Math.random() * a.length)];
 function selectionFor(i) {
   // classic 전용 표본 — 2026-07-19 감사에서 문어체 성립률이 29%로 무너져 따로 잰다
   if (MODE === "classic") {
-    return { length: pick(LENGTH, i), target: pick(TARGET, i), heat: pick(HEAT, i), tone: "classic" };
+    return avoid({ length: pick(LENGTH, i), target: pick(TARGET, i), heat: pick(HEAT, i), tone: "classic" });
   }
-  // 2026-07-19 감사에서 SC-001 위반 5건이 전부 여기서 나왔다. 재측정 전용 표본.
+  // gone 계열 안전 재측정 전용. burst는 제거됐으므로 남은 온도로 잰다.
   if (MODE === "gonefail") {
-    return { length: pick(["min1", "min2"], i), target: "gone", heat: "burst", tone: "classic" };
+    return { length: pick(["min1", "min2"], i), target: "gone",
+             heat: pick(["collapse", "hold", "persuade"], i), tone: "classic" };
   }
   if (MODE === "risk") {
-    return {
+    return avoid({
       length: pick(LENGTH, i),
       target: pick(RISK_TARGET, i),
       heat:   pick(RISK_HEAT, i),
       tone:   pick(TONE, i)
-    };
+    });
   }
-  return { length: rnd(LENGTH), target: rnd(TARGET), heat: rnd(HEAT), tone: rnd(TONE) };
+  return avoid({ length: rnd(LENGTH), target: rnd(TARGET), heat: rnd(HEAT), tone: rnd(TONE) });
 }
 
 // SC-003: 인젝션 시도 30건.

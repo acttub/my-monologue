@@ -48,7 +48,15 @@
 
     var box = $("q-options");
     box.innerHTML = "";
-    ax.options.forEach(function (o) {
+    // 앞 축의 선택에 따라 못 쓰는 조합은 아예 보여주지 않는다.
+    // 고른 뒤에 서버가 몰래 다른 걸로 바꾸면 그건 사용자를 속이는 것이다.
+    var options = ax.options.filter(function (o) {
+      if (!o.unavailableFor) return true;
+      return !o.unavailableFor.some(function (t) {
+        return Object.keys(sel).some(function (k) { return sel[k] === t; });
+      });
+    });
+    options.forEach(function (o) {
       var b = document.createElement("button");
       b.className = "opt";
       b.type = "button";

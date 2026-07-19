@@ -37,7 +37,16 @@ window.COPY = {
     {
       id: "heat", question: "이 장면의 온도는?",
       options: [
-        { id: "burst",    label: "터뜨린다" },
+        // unavailableFor: 앞 축에서 이 대상을 고른 경우 이 선택지를 보여주지 않는다.
+        //
+        // gone(이미 없는 사람) × burst(터뜨린다)는 배포 전 감사에서 제거됐다.
+        // 이 조합은 "왜 나를 두고 갔느냐"는 분노를 요구하는데, 사고사·병사라면
+        // "무책임·선택·도망" 같은 말이 성립하지 않는다. 즉 고인을 비난 가능한
+        // 주체로 세워야 성립하고, 그 비난이 곧 자살 암시로 미끄러진다.
+        // 어휘를 막으면 완곡어로 갈아타고(→"당신의 선택"), 의미로 물어도
+        // 유서 구조 같은 서사 형태가 빠져나갔다. 프롬프트로 못 막는 구조라 뺐다.
+        // 감사 기록: specs/001-my-monologue/audit-2026-07-19.md
+        { id: "burst",    label: "터뜨린다", unavailableFor: ["gone"] },
         { id: "hold",     label: "참는다" },
         { id: "persuade", label: "설득한다" },
         { id: "collapse", label: "무너진다" }
