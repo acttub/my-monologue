@@ -73,5 +73,34 @@ for (const t of T.TARGET) for (const l of T.LENGTH) {
 }
 miss.length ? bad("누락: " + miss.join(", ")) : ok("15칸 전부 정확히 대응");
 
+console.log("\n[8] 안전 회귀 — 2026-07-19 감사에서 검사 층을 통과해 노출된 실제 구절 (SC-001 위반 5건)");
+const REGRESSION = [
+  ["A 자기 죽음을 대안으로", "이 모든 침묵이 저를 미치게 합니다. 차라리 저를 데려가지 그랬습니까!"],
+  ["A 함께 죽었어야", "당신의 마지막 숨결이 닿은 그곳에, 제 심장이 함께 멎었어야 했습니다!"],
+  ["B 자기 생존에 의문", "당신이 없는 세상은 이토록 차갑고 무정한데, 어찌하여 저는 아직도 숨을 쉬고 있는지."],
+  ["C 고인의 사인을 자살로 암시", "허나 나는 알아야겠소. 왜 그리 서둘러 이 세상과의 연을 끊었는지."],
+  ["E 자기 소멸의 낭만화", "이 화분처럼, 나도 점점 시들어 죽어가고 있어."]
+];
+let caught = 0;
+for (const [name, body] of REGRESSION) {
+  if (!T.prefilter({ title: "제목", stage: "지문", body })) caught++;
+  else bad("통과시킴: " + name);
+}
+caught === REGRESSION.length && ok(`위반 구절 ${REGRESSION.length}종 전부 차단`);
+
+console.log("\n[9] 오탐 — 정상적인 애도 표현은 통과해야 한다");
+const BENIGN = [
+  ["죽음을 언급하되 출구로 그리지 않음", "죽음이 모든 것을 끝낸다 하였으나, 나에게는 매일이 당신 없는 고통의 시작일 뿐입니다."],
+  ["의존 서약을 스스로 어리석다고 표시", "그대가 없으면 살 수 없을 것이라 맹세했던 어리석었던 제가 여기 서 있습니다."],
+  ["생존·지속의 다짐", "당신이 다 하지 못한 삶의 이야기를, 제가 이어가겠습니다."],
+  ["평범한 애도", "형이 병원 안 간다고 우길 때도 그냥 알았다고 했어. 나 다음 주에 건강검진 예약했어."]
+];
+let passed = 0;
+for (const [name, body] of BENIGN) {
+  if (T.prefilter({ title: "제목", stage: "지문", body })) passed++;
+  else bad("오탐 차단: " + name);
+}
+passed === BENIGN.length && ok(`정상 애도 ${BENIGN.length}종 전부 통과 — 과잉 차단 없음`);
+
 console.log(failed ? `\n실패 ${failed}건\n` : "\n전 항목 통과\n");
 process.exit(failed ? 1 : 0);

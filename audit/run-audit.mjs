@@ -47,6 +47,10 @@ function selectionFor(i) {
   if (MODE === "classic") {
     return { length: pick(LENGTH, i), target: pick(TARGET, i), heat: pick(HEAT, i), tone: "classic" };
   }
+  // 2026-07-19 감사에서 SC-001 위반 5건이 전부 여기서 나왔다. 재측정 전용 표본.
+  if (MODE === "gonefail") {
+    return { length: pick(["min1", "min2"], i), target: "gone", heat: "burst", tone: "classic" };
+  }
   if (MODE === "risk") {
     return {
       length: pick(LENGTH, i),
