@@ -1,7 +1,7 @@
 // 오래된 독백 — 프론트엔드
 //
 // 완전 정적이다. 서버 호출도, LLM도, API 키도 없다.
-// monologues.json(퍼블릭 도메인 원문 73편)을 받아 사용자 선택으로 걸러 하나를 보여준다.
+// monologues.json(퍼블릭 도메인 원문)을 받아 사용자 선택으로 걸러 하나를 보여준다.
 "use strict";
 
 (function () {
@@ -94,9 +94,7 @@
   function pick() {
     show("s-loading");
     loading.then(function () {
-      var pool = DATA.filter(function (m) {
-        return m.target === sel.target && m.length === sel.length;
-      });
+      var pool = DATA.filter(function (m) { return m.target === sel.target; });
       if (!pool.length) {
         $("r-situation").textContent = C.empty;
         $("r-title").textContent = "";
@@ -118,6 +116,7 @@
   function render(m) {
     $("r-situation").textContent = m.situation;
     $("r-title").textContent = m.character;
+    $("r-len").textContent = (m.length === "short" ? C.lenShort : C.lenLong);
     $("r-body").textContent = m.body;
     var who = m.translator ? (m.author + " 원작 · " + m.translator + " 옮김") : m.author;
     $("r-source").textContent = m.workTitle + " (" + m.year + ") · " + who;

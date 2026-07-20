@@ -45,19 +45,10 @@ const WORKS = [
     license: "PD-old-70",
     note: "극예술연구회 제6회 공연 대본"
   },
-  {
-    id: "merchant",
-    title: "베니스의 상인",
-    author: "윌리엄 셰익스피어",
-    authorDied: 1616,
-    translator: "박용철",
-    translatorDied: 1938,
-    year: 1934,
-    page: "박용철 산문집/베니스의 상인",
-    format: "rendered",
-    license: "PD-old-70",
-    note: "법정 장면 발췌본"
-  }
+  // 「베니스의 상인」은 뺐다. 확보된 3편이 전부 법정 장면인데, 샤일록을 "무도한 유대인"으로
+  // 부르며 집단 전체를 말이 통하지 않는 자연재해에 빗대고, 강제 개종을 판결 조건으로 내건다.
+  // 극 전체 맥락(샤일록이 받은 모욕)이 잘려나간 발췌라 민족 멸칭만 남는다. 원문이라는 사실이
+  // 그 문장을 중립화하지 못한다. 2026-07-20 전수 검토 판정.
 ];
 
 const API = "https://ko.wikisource.org/w/api.php";
@@ -90,14 +81,35 @@ function stripHtml(html) {
 
 // 지문(괄호)·주석·한자병기를 걷어낸 순수 대사
 function cleanSpeech(s) {
-  return String(s)
+  let t = String(s)
     .replace(/<ref[\s\S]*?<\/ref>/g, "")
     .replace(/\{\{[^}]*\}\}/g, "")
-    .replace(/\[\[(?:[^|\]]*\|)?([^\]]*)\]\]/g, "$1")
-    .replace(/\([^)]{0,80}\)/g, " ")       // 지문·한자병기
-    .replace(/[​﻿]/g, "")
+    .replace(/\[\[(?:[^|\]]*\|)?([^\]]*)\]\]/g, "$1");
+
+  // HTML 엔티티를 문자로 되돌린다. 이걸 빼먹으면 본문에 "&#32;&#8203;"가 그대로 노출된다
+  // (2026-07-20 전수 검토에서 14편에서 발견). 숫자 엔티티는 두 번 인코딩된 경우도 있어
+  // &amp; 를 먼저 푼 뒤 다시 처리한다.
+  t = t.replace(/&amp;/g, "&");
+  t = t.replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n));
+  t = t.replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)));
+  t = t.replace(/&(nbsp|lt|gt|quot|apos);/g, (_, e) =>
+    ({ nbsp: " ", lt: "<", gt: ">", quot: '"', apos: "'" }[e]));
+
+  // 지문 제거. 길이 제한을 두지 않는다 — 긴 지문이 본문에 통째로 들어온 사례가 있었다
+  // (화자를 3인칭으로 묘사하는 문장을 화자가 읽게 된다).
+  t = t.replace(/\([^()]*\)/g, " ");
+  t = t.replace(/\([^()]*\)/g, " ");   // 중첩 괄호 1단계 더
+
+  return t
+    .replace(/[\u200b\u200c\u200d\ufeff]/g, "")   // 폭 없는 문자
+    .replace(/\s+([,.!?…])/g, "$1")                 // 한자 병기 제거 후 남는 공백
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// 지문이 본문에 섞여 들어왔는지 — 괄호를 지운 뒤에도 3인칭 서술이 남는 경우가 있다.
+function looksLikeStageDirection(body) {
+  return /(하며|하면서)\s*(퇴장|등장)|은\/는\s*.{0,20}(하다|한다)\.|눈짓과 기침으로/.test(body);
 }
 
 // 위키텍스트 희곡 형식: ";인물" 다음 ":대사"
@@ -148,6 +160,12 @@ for (const w of WORKS) {
   const cands = speeches
     .map((s, i) => ({ ...s, body: cleanSpeech(s.text), idx: i }))
     .filter((s) => s.body.length >= 120)
+    .filter((s) => !looksLikeStageDirection(s.body))
+    // 끝맺지 않은 토막은 뺀다. 쉼표나 줄표로 끝나면 다음 대사로 이어지는 조각이다.
+    .filter((s) => !/[,、―—\-]$/.test(s.body.trim()))
+    // 현대 폰트가 렌더하지 못하는 옛한글 자모가 든 편은 뺀다. 원문을 고치지 않는 대신
+    // 화면에 안 보이는 글자가 나오는 편을 배제한다 (예: 1934년 표기의 인명 "아ᅄᅡ—르").
+    .filter((s) => !/[\u1100-\u11FF\uA960-\uA97F\uD7B0-\uD7FF]/.test(s.body))
     .map((s) => ({
       work: w.id,
       workTitle: w.title,

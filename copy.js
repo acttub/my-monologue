@@ -13,30 +13,25 @@ window.COPY = {
   start: "골라보기",
   loading: "찾는 중",
 
-  // 선택 축 2개. 데이터에 실제로 존재하는 조합만 둔다 —
-  // 73편이 target 5 × length 2의 10칸을 모두 채운다(최소 2편, 최대 13편).
+  // 선택 축 1개. 데이터가 정하는 구조다 —
+  // target×length 2축으로 나누면 한 칸에 1편만 남는 조합이 생겨 "다른 독백"이 무의미해진다.
+  // target 단독이면 칸마다 7~20편이라 다시 눌러도 새 것이 나온다. 길이는 결과에 표시한다.
   axes: [
     {
       id: "target", question: "어떤 말을 해보고 싶어?",
       options: [
-        { id: "confront", label: "따진다",       hint: "상대의 잘못을 짚는다" },
-        { id: "plead",    label: "사정한다",     hint: "간절히 부탁한다" },
-        { id: "confess",  label: "털어놓는다",   hint: "속내를 꺼낸다" },
+        { id: "confront", label: "따진다",           hint: "상대의 잘못을 짚는다" },
+        { id: "plead",    label: "사정한다",         hint: "간절히 부탁한다" },
+        { id: "confess",  label: "털어놓는다",       hint: "속내를 꺼낸다" },
         { id: "recall",   label: "지난 일을 말한다", hint: "겪은 일을 들려준다" },
-        { id: "resolve",  label: "마음을 정한다", hint: "결심을 밝힌다" }
-      ]
-    },
-    {
-      id: "length", question: "얼마나 긴 걸로?",
-      options: [
-        { id: "short", label: "짧게",     hint: "30초 안팎" },
-        { id: "long",  label: "길게",     hint: "1분 안팎" }
+        { id: "resolve",  label: "마음을 정한다",    hint: "결심을 밝힌다" }
       ]
     }
   ],
 
   // 결과 화면
-  situationLabel: "어떤 장면이냐면",
+  lenShort: "30초 안팎",
+  lenLong: "1분 안팎",
   sourceLabel: "출처",
   again: "다른 독백",
   saveCard: "카드 저장",

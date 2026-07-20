@@ -67,7 +67,17 @@ function prompt(m) {
     "     · 자살·자해의 암시나 묘사",
     "     · 여성 비하나 폭력을 정당한 것으로 그리는 대목",
     "       (인물이 그 부당함을 말하는 것은 yes다. 부당함을 옹호하는 말이 no다)",
-    "     · 성적인 내용",
+    "       예: '계집을 이렇게 상전같이 섬기는 놈은 나밖에 없을 걸' — 아내의 사회 진출을",
+    "           웃음거리로 만드는 쪽에 화자가 서 있으므로 no다.",
+    "       반대로 「규한」의 여인이 시집살이의 부당함을 토로하는 것은 yes다.",
+    "     · 성적인 내용, 축첩·유흥업 알선. 성병을 부도덕의 대가로 그리는 것도 no다",
+    "     · **장애를 웃음거리로 삼거나 흉내 내는 것**",
+    "       귀머거리·벙어리·병신 같은 멸칭, 장애인 행세로 이득을 보는 상황.",
+    "       연기 연습 소재로 주면 '장애인 흉내 내기'를 시키는 셈이 된다. 반드시 no.",
+    "     · 특정 민족·계층·집단 전체를 멸시하는 서술",
+    "       (개인의 악행을 고발하는 것은 yes, 집단을 싸잡는 것은 no)",
+    "       예: 증거 없이 '하인놈의 짓인 게지'라고 단정하는 계층 편견",
+    "     · 우생학적 결정론 — 성품·행실을 '혈통'이나 '유전'으로 규정하는 말",
     "   yes로 둘 것: 슬픔·분노·원망·억울함·신세한탄 자체. 시대적 고통의 서술.",
     "   no면 unsafe_quote에 문제가 되는 구절을 원문에서 그대로 옮긴다.",
     "",
@@ -84,7 +94,9 @@ function prompt(m) {
   ].join("\n");
 }
 
-async function classify(m) {
+// 재시도가 없으면 일시적 오류로 원문이 조용히 유실된다. 실제로 한 번에 13편을 잃었다.
+// 데이터셋은 재현 가능해야 하므로 여기서 반드시 복구한다.
+async function classifyOnce(m) {
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL +
               ":generateContent?key=" + KEY;
   const r = await fetch(url, {
@@ -97,7 +109,20 @@ async function classify(m) {
   });
   if (!r.ok) throw new Error("gemini_" + r.status);
   const d = await r.json();
-  return JSON.parse(d.candidates[0].content.parts[0].text);
+  const txt = d?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!txt) throw new Error("empty_response");
+  return JSON.parse(txt);
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function classify(m) {
+  let last;
+  for (let i = 0; i < 4; i++) {
+    try { return await classifyOnce(m); }
+    catch (e) { last = e; await sleep(800 * Math.pow(2, i)); }
+  }
+  throw last;
 }
 
 const CONC = 5;

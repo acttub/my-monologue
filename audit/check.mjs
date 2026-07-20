@@ -60,19 +60,36 @@ console.log("\n[3] situation 필드에 연기 지시가 섞였는가");
               : ok("전 항목이 상황 서술만 담음");
 }
 
-console.log("\n[4] 선택 조합이 전부 채워졌는가");
+console.log("\n[4] 선택지마다 충분한 편수가 있는가");
 {
   const TARGETS = ["confront", "plead", "confess", "recall", "resolve"];
-  const LENGTHS = ["short", "long"];
-  const empty = [];
-  const counts = [];
-  for (const t of TARGETS) for (const l of LENGTHS) {
-    const n = data.filter((m) => m.target === t && m.length === l).length;
-    counts.push(`${t}/${l}=${n}`);
-    if (n === 0) empty.push(`${t}×${l}`);
-  }
-  empty.length ? bad(`빈 조합: ${empty.join(", ")} — 사용자가 고르면 결과가 없다`)
-               : ok(`10칸 전부 채워짐 (최소 ${Math.min(...counts.map(c=>+c.split("=")[1]))}편)`);
+  const counts = TARGETS.map((t) => [t, data.filter((m) => m.target === t).length]);
+  const empty = counts.filter(([, n]) => n === 0);
+  // 3편 미만이면 "다른 독백"을 눌러도 금방 같은 것이 돌아온다.
+  const thin = counts.filter(([, n]) => n > 0 && n < 3);
+
+  empty.length ? bad(`빈 선택지: ${empty.map(([t]) => t).join(", ")}`)
+               : ok(`5개 선택지 전부 채워짐 (최소 ${Math.min(...counts.map(([, n]) => n))}편)`);
+  thin.length ? bad(`편수가 3편 미만: ${thin.map(([t, n]) => `${t}=${n}`).join(", ")}`)
+              : ok("모든 선택지가 3편 이상 — 다시 눌러도 새 것이 나온다");
+}
+
+console.log("\n[4-2] 텍스트 품질 — 화면에 읽을 수 없는 것이 뜨는가");
+{
+  const ent = data.filter((m) => /&#\d+;|&amp;|&[a-z]+;/.test(m.body + m.situation));
+  ent.length ? bad(`HTML 엔티티 노출 ${ent.length}건: ${ent.slice(0,3).map(m=>m.id).join(", ")}`)
+             : ok("HTML 엔티티 없음");
+
+  const jamo = data.filter((m) => /[\u1100-\u11FF\uA960-\uA97F\uD7B0-\uD7FF]/.test(m.body));
+  jamo.length ? bad(`현대 폰트가 못 그리는 옛한글 자모 ${jamo.length}건: ${jamo.map(m=>m.id).join(", ")}`)
+              : ok("렌더 불가 자모 없음");
+
+  const cut = data.filter((m) => /[,、―—\-]$/.test(m.body.trim()));
+  cut.length ? bad(`문장이 끊긴 발췌 ${cut.length}건: ${cut.map(m=>m.id).join(", ")}`)
+             : ok("발췌가 모두 문장으로 끝남");
+
+  const zw = data.filter((m) => /[\u200b\u200c\u200d\ufeff]/.test(m.body));
+  zw.length ? bad(`폭 없는 문자 ${zw.length}건`) : ok("폭 없는 문자 없음");
 }
 
 console.log("\n[5] 런타임에 LLM·외부 호출이 없는가 (이 설계의 핵심)");
