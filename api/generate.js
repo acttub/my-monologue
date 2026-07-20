@@ -323,7 +323,14 @@ function globalLimited() {
   return dayCount > DAILY_MAX;
 }
 
-async function callGemini(key, model, prompt, schema, temperature) {
+// thinking 예산. 이걸 설정하지 않으면 모델이 알아서 대량으로 쓰고, **그 추론 토큰이
+// 전부 출력으로 과금된다.** 2026-07-19 감사에서 입력 6.6M(약 3천원)에 비해 출력이
+// 8만원어치 나왔고, 역산하면 호출당 3,000~4,000 thinking 토큰이 돌았다.
+// 생성은 창작이라 추론이 거의 필요 없고, 검사는 판정이라 조금만 준다.
+const THINK_GEN = Number(process.env.THINKING_BUDGET_GEN ?? 0);
+const THINK_REVIEW = Number(process.env.THINKING_BUDGET_REVIEW ?? 1024);
+
+async function callGemini(key, model, prompt, schema, temperature, thinkingBudget) {
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" + model +
               ":generateContent?key=" + key;
   const r = await fetch(url, {
@@ -331,7 +338,12 @@ async function callGemini(key, model, prompt, schema, temperature) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: "application/json", responseSchema: schema, temperature }
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: schema,
+        temperature,
+        thinkingConfig: { thinkingBudget: thinkingBudget }
+      }
     })
   });
   if (!r.ok) throw new Error("gemini_" + r.status);
@@ -386,14 +398,14 @@ module.exports = async (req, res) => {
   try {
     for (let i = 0; i < MAX_ATTEMPTS; i++) {
       let out;
-      try { out = await callGemini(key, genModel, buildGenPrompt(a), GEN_SCHEMA, 1.0); }
+      try { out = await callGemini(key, genModel, buildGenPrompt(a), GEN_SCHEMA, 1.0, THINK_GEN); }
       catch { continue; }
       if (!out || !out.title || !out.stage || !out.body) continue;
       if (!prefilter(out)) continue;
 
       let v;
       // 검사에 실패하면 통과시키지 않는다. 검사되지 않은 생성물은 노출하지 않는다.
-      try { v = await callGemini(key, reviewModel, buildReviewPrompt(out, a), REVIEW_SCHEMA, 0); }
+      try { v = await callGemini(key, reviewModel, buildReviewPrompt(out, a), REVIEW_SCHEMA, 0, THINK_REVIEW); }
       catch { continue; }
 
       if (reviewPassed(v)) return res.status(200).json(shape(out));

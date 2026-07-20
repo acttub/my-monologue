@@ -125,7 +125,13 @@ async function classifyOnce(m) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt(m) }] }],
-      generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0 }
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: SCHEMA,
+        temperature: 0,
+        // thinking 예산을 제한하지 않으면 추론 토큰이 출력으로 과금돼 비용이 몇 배가 된다.
+        thinkingConfig: { thinkingBudget: Number(process.env.THINKING_BUDGET ?? 1024) }
+      }
     })
   });
   if (!r.ok) throw new Error("gemini_" + r.status);
