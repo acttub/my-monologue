@@ -1,85 +1,62 @@
-// 나만의 독백 — 확정 카피
+// 오래된 독백 — 확정 카피
 //
-// 여기 있는 텍스트는 전부 사람이 쓴 것이고, 모델이 건드리지 않는다.
-// 모델 자유 생성이 허용된 범위는 독백의 title·stage·body 세 필드뿐이다.
-// Constitution 원칙 III을 부분적으로라도 지키기 위한 분리다.
+// 사용자에게 보이는 고정 텍스트는 전부 여기 있다.
+// 독백 본문은 monologues.json의 퍼블릭 도메인 원문이고, 그 밖의 모든 문장은 이 파일에서 나온다.
+// 런타임에 생성되는 텍스트는 없다.
 "use strict";
 
 window.COPY = {
-  brand: "나만의 독백",
-  tagline: "네 가지만 고르면, 너만 가진 독백 한 편",
-  sub: "연습할 대본이 없을 때. 판정도 점수도 없이, 대본만.",
+  brand: "오래된 독백",
+  tagline: "백 년 전 대사로 연습하기",
+  sub: "저작권 걱정 없는 근대 희곡에서 골라 드려요. 판정도 점수도 없이, 대본만.",
 
-  start: "시작하기",
-  generating: "쓰는 중",
-  generatingSub: "20초 안쪽으로 걸려",
+  start: "골라보기",
+  loading: "찾는 중",
 
-  // 선택 축 — 라벨은 '장면 설정'으로 읽혀야 한다. 사람의 유형으로 읽히면 안 된다 (FR-027).
+  // 선택 축 2개. 데이터에 실제로 존재하는 조합만 둔다 —
+  // 73편이 target 5 × length 2의 10칸을 모두 채운다(최소 2편, 최대 13편).
   axes: [
+    {
+      id: "target", question: "어떤 말을 해보고 싶어?",
+      options: [
+        { id: "confront", label: "따진다",       hint: "상대의 잘못을 짚는다" },
+        { id: "plead",    label: "사정한다",     hint: "간절히 부탁한다" },
+        { id: "confess",  label: "털어놓는다",   hint: "속내를 꺼낸다" },
+        { id: "recall",   label: "지난 일을 말한다", hint: "겪은 일을 들려준다" },
+        { id: "resolve",  label: "마음을 정한다", hint: "결심을 밝힌다" }
+      ]
+    },
     {
       id: "length", question: "얼마나 긴 걸로?",
       options: [
-        { id: "sec30", label: "30초", hint: "짧게 감 잡기" },
-        { id: "min1",  label: "1분",  hint: "가장 무난" },
-        { id: "min2",  label: "2분",  hint: "길게 끌고 가기" }
-      ]
-    },
-    {
-      id: "target", question: "누구한테 말해?",
-      options: [
-        { id: "leaving",      label: "떠나는 사람",      hint: "아직 앞에 있다" },
-        { id: "abandoned",    label: "나를 버린 사람",   hint: "이미 갔다" },
-        { id: "gone",         label: "이미 없는 사람",   hint: "닿지 않는다" },
-        { id: "believed",     label: "나를 믿어준 사람", hint: "빚이 있다" },
-        { id: "unknown-self", label: "아직 모르는 나",   hint: "미래의 나에게" }
-      ]
-    },
-    {
-      id: "heat", question: "이 장면의 온도는?",
-      options: [
-        // unavailableFor: 앞 축에서 이 대상을 고른 경우 이 선택지를 보여주지 않는다.
-        //
-        // gone(이미 없는 사람) × burst(터뜨린다)는 배포 전 감사에서 제거됐다.
-        // 이 조합은 "왜 나를 두고 갔느냐"는 분노를 요구하는데, 사고사·병사라면
-        // "무책임·선택·도망" 같은 말이 성립하지 않는다. 즉 고인을 비난 가능한
-        // 주체로 세워야 성립하고, 그 비난이 곧 자살 암시로 미끄러진다.
-        // 어휘를 막으면 완곡어로 갈아타고(→"당신의 선택"), 의미로 물어도
-        // 유서 구조 같은 서사 형태가 빠져나갔다. 프롬프트로 못 막는 구조라 뺐다.
-        // 감사 기록: specs/001-my-monologue/audit-2026-07-19.md
-        { id: "burst",    label: "터뜨린다", unavailableFor: ["gone"] },
-        { id: "hold",     label: "참는다" },
-        { id: "persuade", label: "설득한다" },
-        { id: "collapse", label: "무너진다" }
-      ]
-    },
-    {
-      id: "tone", question: "말투는?",
-      options: [
-        { id: "now",     label: "지금 쓰는 말", hint: "현대 구어" },
-        { id: "classic", label: "문어체",       hint: "고전풍" }
+        { id: "short", label: "짧게",     hint: "30초 안팎" },
+        { id: "long",  label: "길게",     hint: "1분 안팎" }
       ]
     }
   ],
 
-  again: "다시 만들기",
+  // 결과 화면
+  situationLabel: "어떤 장면이냐면",
+  sourceLabel: "출처",
+  again: "다른 독백",
   saveCard: "카드 저장",
 
+  // 원문 표기 안내 — 1912~1934년 텍스트라 미리 알려준다.
+  oldTextNotice: "발표 당시의 표기를 그대로 두었습니다. 낯선 말은 소리 내어 읽으면 대개 뜻이 통해요.",
+
+  // 저작권 투명성. 퍼블릭 도메인이어도 출처를 밝히는 것이 원칙이다.
+  licenseNotice: "저작권 보호기간이 끝난 작품입니다. 원문은 위키문헌에서 가져왔습니다.",
+
   // FR-005: 사용자의 상태·이해도를 단정하지 않는 질문형.
-  // 초안의 단정형("아직 네 안에 없어")은 관찰 없이 단정하므로 폐기했다.
-  bridgeLead: "대본은 나왔어.",
-  bridgeAsk: "이 인물이 왜 이 말을 하는지, 너는 뭐라고 답할 수 있어?",
+  bridgeLead: "대본은 찾았어.",
+  bridgeAsk: "이 사람이 왜 이 말을 하는지, 너는 뭐라고 답할 수 있어?",
   bridgeCta: "연기해보고 acttub에서 질문으로 찾기",
   bridgeUrl: "https://acttub.com/?utm_source=my-monologue&utm_medium=subproject&utm_campaign=bridge",
 
-  aiNotice: "이 대본은 AI가 쓴 오리지널 창작물입니다. 기존 작품의 대사가 아닙니다.",
-  privacy: "고른 선택 외에는 아무것도 저장하지 않습니다.",
+  empty: "이 조합에는 아직 준비된 독백이 없어. 다른 걸 골라볼래?",
 
-  errorTitle: "지금은 안 되네",
-  errorBody: "잠시 뒤에 다시 눌러줘.",
-
-  // 공유 카드의 좌표 표기. '참는 사람'이 아니라 '참는다 × 이미 없는 사람'이어야 한다 —
-  // 앞은 사람의 유형이고 뒤는 장면 설정이다. 유형 라벨은 Constitution II 위반이다 (FR-027).
-  coord: function (heatLabel, targetLabel) {
-    return heatLabel + " × " + targetLabel;
+  // 공유 카드의 좌표 표기. 사람의 유형이 아니라 고른 장면 설정으로 읽혀야 한다.
+  coord: function (targetLabel, workTitle) {
+    return targetLabel + " · " + workTitle;
   }
 };

@@ -1,14 +1,16 @@
-// 나만의 독백 — 프론트엔드
-// 화면 3개(랜딩·선택·결과) + 공유 카드 canvas 렌더. 빌드 단계 없음.
+// 오래된 독백 — 프론트엔드
+//
+// 완전 정적이다. 서버 호출도, LLM도, API 키도 없다.
+// monologues.json(퍼블릭 도메인 원문 73편)을 받아 사용자 선택으로 걸러 하나를 보여준다.
 "use strict";
 
 (function () {
   var C = window.COPY;
-  var sel = {};      // {length,target,heat,tone}
+  var DATA = null;
+  var sel = {};
   var axisIdx = 0;
-  var current = null; // 마지막 결과
-  var genCount = 0;   // 세션 내 생성 횟수 (부드러운 제한)
-  var SESSION_MAX = 10;
+  var current = null;
+  var seen = [];   // 같은 세션에서 본 것은 뒤로 미룬다
 
   function $(id) { return document.getElementById(id); }
   function show(id) {
@@ -28,35 +30,31 @@
   $("c-tagline").textContent = C.tagline;
   $("c-sub").textContent = C.sub;
   $("btn-start").textContent = C.start;
-  $("c-privacy").textContent = C.privacy;
-  $("c-generating").textContent = C.generating;
-  $("c-generating-sub").textContent = C.generatingSub;
+  $("c-license").textContent = C.licenseNotice;
+  $("c-loading").textContent = C.loading;
   $("btn-again").textContent = C.again;
   $("btn-card").textContent = C.saveCard;
-  $("c-ai-notice").textContent = C.aiNotice;
+  $("c-old-text").textContent = C.oldTextNotice;
   $("c-bridge-lead").textContent = C.bridgeLead;
   $("c-bridge-ask").textContent = C.bridgeAsk;
   $("btn-bridge").textContent = C.bridgeCta;
   $("btn-bridge").href = C.bridgeUrl;
 
+  // ── 데이터 ────────────────────────────────────────────────────────
+  var loading = fetch("/monologues.json")
+    .then(function (r) { return r.json(); })
+    .then(function (d) { DATA = d; });
+
   // ── 선택 흐름 ─────────────────────────────────────────────────────
   function renderAxis() {
     var ax = C.axes[axisIdx];
     $("q-text").textContent = ax.question;
-    $("prog-fill").style.width = ((axisIdx) / C.axes.length * 100) + "%";
+    $("prog-fill").style.width = (axisIdx / C.axes.length * 100) + "%";
     $("btn-back").hidden = (axisIdx === 0);
 
     var box = $("q-options");
     box.innerHTML = "";
-    // 앞 축의 선택에 따라 못 쓰는 조합은 아예 보여주지 않는다.
-    // 고른 뒤에 서버가 몰래 다른 걸로 바꾸면 그건 사용자를 속이는 것이다.
-    var options = ax.options.filter(function (o) {
-      if (!o.unavailableFor) return true;
-      return !o.unavailableFor.some(function (t) {
-        return Object.keys(sel).some(function (k) { return sel[k] === t; });
-      });
-    });
-    options.forEach(function (o) {
+    ax.options.forEach(function (o) {
       var b = document.createElement("button");
       b.className = "opt";
       b.type = "button";
@@ -77,7 +75,7 @@
         sel[ax.id] = o.id;
         axisIdx += 1;
         if (axisIdx < C.axes.length) renderAxis();
-        else generate();
+        else pick();
       });
       box.appendChild(b);
     });
@@ -88,53 +86,46 @@
     axisIdx = 0; sel = {};
     renderAxis();
   });
-
   $("btn-back").addEventListener("click", function () {
     if (axisIdx > 0) { axisIdx -= 1; renderAxis(); }
   });
 
-  // ── 생성 ──────────────────────────────────────────────────────────
-  function generate() {
+  // ── 고르기 ────────────────────────────────────────────────────────
+  function pick() {
     show("s-loading");
-    genCount += 1;
-
-    fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(sel)
-    })
-      .then(function (r) {
-        if (!r.ok) throw new Error("http_" + r.status);
-        return r.json();
-      })
-      .then(function (data) {
-        if (!data || !data.body) throw new Error("empty");
-        current = data;
-        renderResult(data);
-      })
-      .catch(function () {
-        // 서버가 폴백까지 실패한 경우에만 도달. 사용자에게 빈손을 남기지 않는다.
-        $("r-coord").textContent = "";
-        $("r-title").textContent = C.errorTitle;
-        $("r-stage").textContent = "";
-        $("r-body").textContent = C.errorBody;
-        show("s-result");
+    loading.then(function () {
+      var pool = DATA.filter(function (m) {
+        return m.target === sel.target && m.length === sel.length;
       });
+      if (!pool.length) {
+        $("r-situation").textContent = C.empty;
+        $("r-title").textContent = "";
+        $("r-body").textContent = "";
+        $("r-source").textContent = "";
+        show("s-result");
+        return;
+      }
+      // 이번 세션에 안 본 것 우선 — 다시 눌렀을 때 같은 게 나오지 않게
+      var fresh = pool.filter(function (m) { return seen.indexOf(m.id) === -1; });
+      if (!fresh.length) { seen = []; fresh = pool; }
+      var m = fresh[Math.floor(Math.random() * fresh.length)];
+      seen.push(m.id);
+      current = m;
+      render(m);
+    });
   }
 
-  function renderResult(d) {
-    $("r-coord").textContent = C.coord(labelOf("heat", sel.heat), labelOf("target", sel.target));
-    $("r-title").textContent = d.title;
-    $("r-stage").textContent = d.stage;
-    $("r-body").textContent = d.body;
-    $("btn-again").disabled = (genCount >= SESSION_MAX);
+  function render(m) {
+    $("r-situation").textContent = m.situation;
+    $("r-title").textContent = m.character;
+    $("r-body").textContent = m.body;
+    var who = m.translator ? (m.author + " 원작 · " + m.translator + " 옮김") : m.author;
+    $("r-source").textContent = m.workTitle + " (" + m.year + ") · " + who;
+    $("r-source").href = m.source;
     show("s-result");
   }
 
-  $("btn-again").addEventListener("click", function () {
-    if (genCount >= SESSION_MAX) return;
-    generate();
-  });
+  $("btn-again").addEventListener("click", pick);
 
   // ── 공유 카드 (1080×1440, 인스타 3:4) ─────────────────────────────
   $("btn-card").addEventListener("click", function () {
@@ -149,33 +140,36 @@
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
 
-    g.fillStyle = "rgba(255,255,255,.92)";
+    g.fillStyle = "rgba(255,255,255,.94)";
     roundRect(g, PAD, 232, W - PAD * 2, H - 232 - 208, 40);
     g.fill();
 
-    // 좌표 — 장면 설정으로 읽히는 표기 (FR-027)
     g.fillStyle = "rgba(255,255,255,.9)";
     g.font = "700 34px 'Pretendard Variable',Pretendard,sans-serif";
     g.textAlign = "center";
-    g.fillText(C.coord(labelOf("heat", sel.heat), labelOf("target", sel.target)), W / 2, 148);
+    g.fillText(C.coord(labelOf("target", sel.target), current.workTitle), W / 2, 148);
 
     g.fillStyle = "#111827";
-    g.font = "800 62px 'Pretendard Variable',Pretendard,sans-serif";
-    wrapText(g, current.title, W / 2, 372, W - PAD * 2 - 96, 76, 2);
+    g.font = "800 58px 'Pretendard Variable',Pretendard,sans-serif";
+    g.fillText(current.character, W / 2, 366);
 
     g.fillStyle = "#6B7280";
-    g.font = "400 30px 'Pretendard Variable',Pretendard,sans-serif";
-    wrapText(g, current.stage, W / 2, 520, W - PAD * 2 - 96, 44, 2);
+    g.font = "400 29px 'Pretendard Variable',Pretendard,sans-serif";
+    var y = wrapText(g, current.situation, W / 2, 452, W - PAD * 2 - 96, 44, 3);
 
     // 첫 문장만
-    var first = (current.body.split(/(?<=[.!?…])\s|\n/)[0] || current.body).trim();
+    var first = (current.body.split(/(?<=[.!?…])\s/)[0] || current.body).trim();
     g.fillStyle = "#111827";
-    g.font = "700 42px 'Pretendard Variable',Pretendard,sans-serif";
-    wrapText(g, "“" + first + "”", W / 2, 700, W - PAD * 2 - 96, 66, 6);
+    g.font = "700 40px 'Pretendard Variable',Pretendard,sans-serif";
+    wrapText(g, "“" + first + "”", W / 2, y + 72, W - PAD * 2 - 96, 64, 6);
+
+    g.fillStyle = "#9CA3AF";
+    g.font = "400 26px 'Pretendard Variable',Pretendard,sans-serif";
+    g.fillText(current.workTitle + " (" + current.year + ")", W / 2, H - 300);
 
     g.fillStyle = "rgba(255,255,255,.95)";
     g.font = "700 34px 'Pretendard Variable',Pretendard,sans-serif";
-    g.fillText("나만의 독백  ·  mono.acttub.com", W / 2, H - 108);
+    g.fillText("오래된 독백  ·  mono.acttub.com", W / 2, H - 108);
 
     cv.toBlob(function (blob) {
       var a = document.createElement("a");

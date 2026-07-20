@@ -101,3 +101,13 @@ body{
   .r-title{font-size:25px}
   .r-body{padding:22px 20px;font-size:16px}
 }
+
+/* 결과 — 큐레이션 전환분 */
+.r-situation{
+  color:var(--ink-2);font-size:15px;line-height:1.7;margin-bottom:22px;
+  padding-left:14px;border-left:3px solid var(--blue);
+}
+.r-source{
+  display:block;margin-top:14px;color:var(--ink-3);font-size:13px;text-decoration:none;
+}
+.r-source:hover{color:var(--blue);text-decoration:underline}
